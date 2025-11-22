@@ -1,6 +1,6 @@
-# Landing Page Project
+# Binance Portfolio Tracker
 
-A production-ready Django landing page application with Docker, Nginx, Gunicorn, and PostgreSQL.
+A full-stack application to track your Binance cryptocurrency portfolio with real-time data visualization. Built with Django, React, Docker, Nginx, Gunicorn, and PostgreSQL.
 
 ## Tech Stack
 
@@ -10,6 +10,12 @@ A production-ready Django landing page application with Docker, Nginx, Gunicorn,
 - **Gunicorn 21.2.0** - Production WSGI server
 - **PostgreSQL 15** - Database
 - **Python 3.11** - Programming language
+- **python-binance 1.0.19** - Binance API integration
+
+### Frontend
+- **React 18** - UI framework
+- **Axios** - HTTP client
+- **Modern CSS** - Responsive design with gradients and animations
 
 ### Infrastructure
 - **Docker & Docker Compose** - Containerization
@@ -18,16 +24,19 @@ A production-ready Django landing page application with Docker, Nginx, Gunicorn,
 
 ## Architecture
 
-The application uses a production-ready architecture:
+The application uses a production-ready microservices architecture:
 
 ```
-Browser → Nginx (port 80) → Gunicorn (port 8000) → Django → PostgreSQL
+Browser → React (port 3000) → Nginx (port 80) → Django API (port 8000) → Binance API
+                                      ↓
+                                 PostgreSQL
 ```
 
 **Services:**
 - `db`: PostgreSQL 15 database
-- `web`: Django application with Gunicorn (3 workers)
-- `nginx`: Nginx reverse proxy serving static files and proxying to Gunicorn
+- `web`: Django application with Gunicorn (3 workers) + Binance integration
+- `nginx`: Nginx reverse proxy serving static files and proxying to Django
+- `frontend`: React development server for portfolio UI
 
 ## Quick Start
 
@@ -46,17 +55,34 @@ Browser → Nginx (port 80) → Gunicorn (port 8000) → Django → PostgreSQL
 
 2. **Environment Configuration**
    
-   The `.env` file is already configured for Docker development:
+   Create a `.env` file with your configuration:
    ```env
    DEBUG=True
    SECRET_KEY=django-insecure-change-this-in-production
+   
+   # Database
    DB_NAME=landing_page_db
    DB_USER=postgres
    DB_PASSWORD=postgres
    DB_HOST=db
    DB_PORT=5432
+   
+   # Binance API (Required)
+   BINANCE_API_KEY=your_binance_api_key_here
+   BINANCE_API_SECRET=your_binance_api_secret_here
+   BINANCE_TESTNET=False
+   
    ALLOWED_HOSTS=localhost,127.0.0.1
    ```
+   
+   > [!IMPORTANT]
+   > **Binance API Keys**: You need to create API keys from your Binance account. Use **READ-ONLY** permissions for security.
+   > 
+   > How to get Binance API keys:
+   > 1. Log in to [Binance](https://www.binance.com)
+   > 2. Go to Account → API Management
+   > 3. Create a new API key with **READ-ONLY** permissions
+   > 4. Copy the API Key and Secret to your `.env` file
 
 3. **Build and start containers**
    ```bash
@@ -64,8 +90,9 @@ Browser → Nginx (port 80) → Gunicorn (port 8000) → Django → PostgreSQL
    ```
 
 4. **Access the application**
-   - Main application: **http://localhost**
-   - Admin panel: **http://localhost/admin** (after creating superuser)
+   - **Portfolio Dashboard**: **http://localhost:3000** (React frontend)
+   - **Django API**: **http://localhost/api/portfolio/**
+   - **Admin panel**: **http://localhost/admin** (after creating superuser)
 
 ### First Time Setup
 
@@ -91,6 +118,7 @@ docker-compose logs -f
 # View logs for specific service
 docker-compose logs -f web
 docker-compose logs -f nginx
+docker-compose logs -f frontend
 docker-compose logs -f db
 
 # Check service status
@@ -139,9 +167,26 @@ landing_page/
 ├── landing_page/          # Django project configuration
 │   ├── __init__.py
 │   ├── asgi.py
-│   ├── settings.py       # Project settings (PostgreSQL only)
+│   ├── settings.py       # Project settings (PostgreSQL + Binance)
 │   ├── urls.py           # URL routing
 │   └── wsgi.py           # WSGI configuration
+├── portfolio/            # Portfolio Django app
+│   ├── services/
+│   │   └── binance_service.py  # Binance API integration
+│   ├── views.py          # API views
+│   └── urls.py           # Portfolio routes
+├── frontend/             # React application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Portfolio.jsx   # Portfolio component
+│   │   │   └── Portfolio.css   # Styling
+│   │   ├── services/
+│   │   │   └── api.js          # API client
+│   │   ├── App.jsx
+│   │   └── index.js
+│   ├── public/
+│   ├── package.json
+│   └── Dockerfile
 ├── nginx/                # Nginx configuration
 │   ├── Dockerfile        # Nginx Docker image
 │   └── nginx.conf        # Nginx server configuration
@@ -175,6 +220,20 @@ landing_page/
 - **Static Files**: Served directly from `/app/staticfiles/`
 - **Cache**: 30-day cache for static files
 - **Proxy**: All dynamic requests proxied to Gunicorn
+
+### React Frontend
+- **Port**: 3000 (development server)
+- **Auto-refresh**: Portfolio updates every 30 seconds
+- **API URL**: `http://localhost/api`
+
+### Binance Integration
+- **API Endpoint**: `/api/portfolio/`
+- **Test Endpoint**: `/api/portfolio/test/`
+- **Features**:
+  - Real-time portfolio balance
+  - USD value calculation
+  - Asset percentage distribution
+  - Support for multiple trading pairs (USDT, BUSD, BTC)
 
 ### Environment Variables
 
@@ -218,6 +277,8 @@ Before deploying to production:
 - [ ] Set `DEBUG=False`
 - [ ] Update `ALLOWED_HOSTS` with your domain
 - [ ] Use strong database passwords
+- [ ] **Use READ-ONLY Binance API keys**
+- [ ] **Enable IP whitelist on Binance API keys**
 - [ ] Configure SSL/TLS certificates for HTTPS
 - [ ] Set up proper logging and monitoring
 - [ ] Configure database backups
@@ -257,25 +318,52 @@ docker-compose restart nginx
 ## Setup History
 
 ✅ **Environment Configuration**
-- Created `.env` file with PostgreSQL configuration
+- Created `.env` file with PostgreSQL and Binance API configuration
 - Removed SQLite, using PostgreSQL exclusively
 
 ✅ **Docker Infrastructure**
 - PostgreSQL 15 database with health checks
 - Django application with Gunicorn WSGI server
 - Nginx reverse proxy for production-like setup
+- React development server for frontend
 
 ✅ **Django Project**
 - Initialized Django project "landing_page"
 - Configured for PostgreSQL only
 - Applied all initial migrations
 - Static files collection configured
+- Created `portfolio` app for Binance integration
+
+✅ **Binance API Integration**
+- Integrated python-binance library
+- Created Binance service for portfolio data
+- REST API endpoints at `/api/portfolio/`
+- CORS configured for React frontend
+- Real-time portfolio balance and USD value calculation
+
+✅ **React Frontend**
+- Modern portfolio dashboard with gradient UI
+- Auto-refresh every 30 seconds
+- Responsive design with animations
+- Asset cards with percentage bars
+- Loading and error states
 
 ✅ **Production Ready**
 - Nginx serving static files efficiently
 - Gunicorn with multiple workers
 - Shared volumes for static files
 - Proper service dependencies and health checks
+- Secure API key management
+
+## Features
+
+- 💼 **Real-time Portfolio Tracking**: View your Binance portfolio composition
+- 💰 **USD Value Calculation**: Automatic conversion to USD for all assets
+- 📊 **Visual Representation**: Asset percentage bars and cards
+- 🔄 **Auto-refresh**: Portfolio updates every 30 seconds
+- 🎨 **Modern UI**: Gradient design with smooth animations
+- 🔒 **Secure**: API keys stored server-side only
+- 🐳 **Docker Ready**: Complete containerized setup
 
 ## License
 

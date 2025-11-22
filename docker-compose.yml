@@ -17,15 +17,12 @@ services:
 
   web:
     build: .
+    env_file:
+      - .env
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
     environment:
-      - DEBUG=${DEBUG:-True}
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this-in-production}
-      - DB_NAME=${DB_NAME:-landing_page_db}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
       - DB_HOST=db
       - DB_PORT=5432
     depends_on:
@@ -42,6 +39,23 @@ services:
       - static_volume:/app/staticfiles:ro
     depends_on:
       - web
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost/api
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - web
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:
